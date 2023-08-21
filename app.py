@@ -18,7 +18,9 @@ def index():
 @app.route("/earthquakes")
 def earthquakes():
     response = requests.get(URL)
-    return jsonify(response.json())
+    json_response = response.json()
+    list_of_eqs = json_response["features"]
+    return jsonify(list_of_eqs)
 
 
 if __name__ == "__main__":
