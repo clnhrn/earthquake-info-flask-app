@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -15,50 +18,87 @@
 <body>
     <style>
         .leaflet-tooltip {
+            background-color: rgba(255, 255, 255, 0.8);
+            font-family: 'Roboto', sans-serif;
             border-radius: 7px;
         }
+        .leaflet-tooltip:before {
+            display: none;
+        }
+        html { 
+            height: 100%;
+        }
+		body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0;
+        }
+		#map { 
+            height: 100%;
+        }
     </style>
-    <div id="map" style="height: 600px;"></div>
+    <div id="map"></div>
     <script>
-        var map = L.map('map').setView([0, 0], 2);
+        // define bounds
+        var southWest = L.latLng(-75, -170);
+        var northEast = L.latLng(75, 170);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        var bounds = L.latLngBounds(southWest, northEast);
+        var map = L.map('map', {
+            // zoomControl: false,
+            minZoom: 2,
+            maxBounds: bounds,
+            maxBoundsViscosity: 1.0
+            }).setView([0, 0], 2);
 
         // create cluster group
         var markers = L.markerClusterGroup();
 
-        // define rules for circle sizes
-        var circleSizeRules = [
-            { threshold: 2.5, radius: 500 },
-            { threshold: 5.4, radius: 1000 },
-            { threshold: 6, radius: 1500 },
-            { threshold: 6.9, radius: 2000 },
-            { threshold: 7.9, radius: 2500 },
-            { threshold: 8, radius: 3500 },
-            { threshold: 10, radius: 5000 },
-        ];
-
+        // fetch data from USGS earthquake API
         fetch('/earthquakes')
             .then(response => response.json())
             .then(data => {
                 data.forEach(earthquake => {
-                    var circleSizeRule = circleSizeRules.find(function (rule) {
-                        return earthquake.properties.mag <= rule.threshold;
+                    // set custom icon
+                    const eqIcon = L.icon({
+                        iconUrl: "{{ url_for('static', filename='earthquake.png') }}",
+                        iconSize: [30, 30],
+                        iconAnchor: [5, 15],
+                        popupAnchor: [-10, -20]
                     });
-                    const circle = L.circle([earthquake.geometry.coordinates[1], earthquake.geometry.coordinates[0]], {
-                        color: 'red',  // Circle border color
-                        fillColor: 'red',  // Circle fill color
-                        fillOpacity: 0.5,  // Circle fill opacity
-                        weight: 0.5, // Circle stroke width
-                        radius: circleSizeRule.radius,
-                    });
-    
-                    circle.bindTooltip(`<strong>Magnitude:</strong> ${earthquake.properties.mag}<br><strong>Location:</strong> ${earthquake.properties.place}`);
 
-                    markers.addLayer(circle)
+
+                    const eqMarker = L.marker([earthquake.geometry.coordinates[1], earthquake.geometry.coordinates[0]], {
+                        icon: eqIcon
+                    });
+                    
+                    // add tooltip with earthquake details
+                    eqMarker.bindTooltip(`<strong>Magnitude:</strong> ${earthquake.properties.mag}<br><strong>Location:</strong> ${earthquake.properties.place}`);
+
+                    markers.addLayer(eqMarker)
             });
             map.addLayer(markers)
+            map.fitBounds(markers.getBounds());
         }); 
+
+
+        // add basemap layers
+        var basemaps = {
+            "ESRI_WorldStreetMap": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 15,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012, <a href="https://www.freepik.com/icon/earthquake_1684394#fromView=resource_detail&position=6">Icon by Freepik</a>'
+            }),
+            "OSM": L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 15,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://www.freepik.com/icon/earthquake_1684394#fromView=resource_detail&position=6">Icon by Freepik</a>'
+            }),
+        }
+
+        // set default basemap
+        basemaps["ESRI_WorldStreetMap"].addTo(map);
+
+        // create basemap control
+        L.control.layers(basemaps).addTo(map);
 
     </script>
 </body>
