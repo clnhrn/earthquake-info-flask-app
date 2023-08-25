@@ -40,8 +40,8 @@
     <div id="map"></div>
     <script>
         // define bounds
-        var southWest = L.latLng(-75, -170);
-        var northEast = L.latLng(75, 170);
+        var southWest = L.latLng(-85, -180);
+        var northEast = L.latLng(85, 180);
 
         var bounds = L.latLngBounds(southWest, northEast);
         var map = L.map('map', {
@@ -71,9 +71,18 @@
                     const eqMarker = L.marker([earthquake.geometry.coordinates[1], earthquake.geometry.coordinates[0]], {
                         icon: eqIcon
                     });
+
+                    // convert unix timestamp to UTC
+                    let unix_timestamp = earthquake.properties.time;
+                    var date = new Date(unix_timestamp);
+                    var hours = date.getHours();
+                    var minutes = "0" + date.getMinutes();
+                    var seconds = "0" + date.getSeconds();
+                    var formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+                    var formattedDate = date.toLocaleDateString("en-US")
                     
                     // add tooltip with earthquake details
-                    eqMarker.bindTooltip(`<strong>Magnitude:</strong> ${earthquake.properties.mag}<br><strong>Location:</strong> ${earthquake.properties.place}`);
+                    eqMarker.bindTooltip(`<strong>Time:</strong> ${formattedDate} ${formattedTime} UTC<br><strong>Magnitude:</strong> ${earthquake.properties.mag}<br><strong>Location:</strong> ${earthquake.properties.place}`);
 
                     markers.addLayer(eqMarker)
             });
